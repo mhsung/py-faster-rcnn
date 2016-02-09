@@ -6,6 +6,7 @@
 # --------------------------------------------------------
 
 from .imdb import imdb
+from .custom import custom
 from .pascal_voc import pascal_voc
 from . import factory
 

@@ -9,6 +9,7 @@
 
 __sets = {}
 
+import datasets.custom
 import datasets.pascal_voc
 import numpy as np
 
@@ -36,6 +37,23 @@ for top_k in np.arange(1000, 11000, 1000):
             name = 'voc_{}_{}_top_{:d}'.format(year, split, top_k)
             __sets[name] = (lambda split=split, year=year, top_k=top_k:
                     _selective_search_IJCV_top_k(split, year, top_k))
+
+
+# Set up inria_<split> using selective search "fast" mode
+part_devkit_path = '/orions3-zfs/projects/minhyuk/data/part_synthesis/'
+for split in ['train', 'test']:
+    name = '{}_{}'.format('part_synthesis', split)
+    __sets[name] = (lambda split=split: datasets.custom(split, part_devkit_path))
+
+object_devkit_path = '/orions3-zfs/projects/minhyuk/data/object_synthesis/'
+for split in ['train', 'test']:
+    name = '{}_{}'.format('object_synthesis', split)
+    __sets[name] = (lambda split=split: datasets.custom(split, object_devkit_path))
+
+custom_devkit_path = '/orions3-zfs/projects/minhyuk/data/test_nyud2_custom/'
+for split in ['train', 'test']:
+    name = '{}_{}'.format('custom', split)
+    __sets[name] = (lambda split=split: datasets.custom(split, custom_devkit_path))
 
 def get_imdb(name):
     """Get an imdb (image database) by name."""
