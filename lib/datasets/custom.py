@@ -5,12 +5,14 @@
 # Written by Ross Girshick
 # --------------------------------------------------------
 
+import custom_utils
 import datasets
 import datasets.custom
 import os
 import datasets.imdb
 import xml.dom.minidom as minidom
 import numpy as np
+from PIL import Image
 import scipy.sparse
 import scipy.io as sio
 import utils.cython_bbox
@@ -233,16 +235,6 @@ class custom(datasets.imdb):
         gt_classes = (objs[:, 4]).astype(np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
 
-        '''
-        if objs.shape[1] >= 6:
-            gt_cls_overlaps = (objs[:, 5]).astype(np.float32)
-            for ix in range(num_objs):
-                cls = gt_classes[ix]
-                ov = gt_cls_overlaps[ix]
-                assert(ov > 0)
-                overlaps[ix, cls] = ov
-        else:
-        '''
         for ix in range(num_objs):
             cls = gt_classes[ix]
             overlaps[ix, cls] = 1.0
@@ -254,6 +246,7 @@ class custom(datasets.imdb):
                 'gt_overlaps': overlaps,
                 'flipped': False}
 
+    '''
     def _write_custom_results_file(self, all_boxes):
         use_salt = self.config['use_salt']
         comp_id = 'comp4'
@@ -283,6 +276,80 @@ class custom(datasets.imdb):
                                        dets[k, 0] + 1, dets[k, 1] + 1,
                                        dets[k, 2] + 1, dets[k, 3] + 1))
         return comp_id
+    '''
+
+    def _write_custom_results_file(self, all_boxes):
+        # Parameters.
+        kScoreTol = 0.5
+
+        color_image_dir = os.path.join(self._devkit_path, 'data/Colors')
+        depth_image_dir = os.path.join(self._devkit_path, 'data/depth')
+
+        result_dir = os.path.join(self._devkit_path, 'results', self.name)
+        output_box_dir = os.path.join(result_dir, 'boxes')
+        output_image_dir = os.path.join(result_dir, 'images')
+
+        if not os.path.isdir(output_box_dir):
+            os.makedirs(output_box_dir)
+
+        if not os.path.isdir(output_image_dir):
+            os.makedirs(output_image_dir)
+
+        for im_ind, index in enumerate(self.image_index):
+            print 'Writing {} results file'.format(index)
+
+            # Read images.
+            color_im = Image.open(color_image_dir + '/' + index + '.png')
+            depth_im = Image.open(depth_image_dir + '/' + index + '.png')
+
+            # Rescale the 16bit depth image and convert the gratscale image to a rgb image.
+            max_depth = depth_im.getextrema()[1]
+            temp_im = Image.new('L', depth_im.size)
+            temp_im.putdata(depth_im.getdata(), (255.0 / max_depth))
+            depth_im = Image.merge('RGB', [temp_im, temp_im, temp_im])
+
+            out_box_filename = output_box_dir + '/' + index + '.csv'
+
+            with open(out_box_filename, 'wt') as f:
+                for cls_ind, cls in enumerate(self.classes):
+                    if cls == '__background__':
+                        continue
+
+                    dets = all_boxes[cls_ind][im_ind]
+                    if dets == []:
+                        continue
+
+                    color = custom_utils.random_color(cls_ind)
+
+                    for k in xrange(dets.shape[0]):
+                        # Format: (xmin, ymin, xmax, ymax, cls_ind, score, (roi_ind))
+                        # (xmin, ymin, xmax, ymax): Starts from zero.
+                        if dets.shape[1] > 5:
+                            # @mhsung
+                            # Record the original roi indices at the last column
+                            f.write('{:.1f},{:.1f},{:.1f},{:.1f},{:d},{:.3f} {:d}\n'.
+                                    format(dets[k, 0], dets[k, 1], dets[k, 2], dets[k, 3],\
+                                        cls_ind, dets[k, 4], int(dets[k, 5])))
+                        else:
+                            f.write('{:.1f},{:.1f},{:.1f},{:.1f},{:d},{:.3f}\n'.
+                                    format(dets[k, 0], dets[k, 1], dets[k, 2], dets[k, 3],\
+                                        cls_ind, dets[k, 4]))
+                        score = dets[k, 4]
+                        if score >= kScoreTol:
+                            text = cls + '[' + str(score) + ']'
+                            custom_utils.draw_rect_image(color_im,\
+                                    dets[k, 0], dets[k, 1], dets[k, 2], dets[k, 3], text, color)
+                            custom_utils.draw_rect_image(depth_im,\
+                                    dets[k, 0], dets[k, 1], dets[k, 2], dets[k, 3], text, color)
+
+            width, height = color_im.size
+            im = Image.new('RGB', (2 * width, height))
+            im.paste(color_im, (0, 0))
+            im.paste(depth_im, (width, 0))
+
+            out_image = output_image_dir + '/' + index + '.png'
+            im.save(out_image)
+
 
     def _do_matlab_eval(self, comp_id, output_dir='output'):
         rm_results = self.config['cleanup']

@@ -216,7 +216,9 @@ def apply_nms(all_boxes, thresh):
             dets = all_boxes[cls_ind][im_ind]
             if dets == []:
                 continue
-            keep = nms(dets, thresh)
+            # @mhsung
+            #keep = nms(dets, thresh)
+            keep = nms(dets[:, 0:5], thresh)
             if len(keep) == 0:
                 continue
             nms_boxes[cls_ind][im_ind] = dets[keep, :].copy()
@@ -281,8 +283,16 @@ def test_net(net, imdb):
                     heapq.heappop(top_scores[j])
                 thresh[j] = top_scores[j][0]
 
+            # @mhsung
+            # Add the original roi indices at the last column.
+            '''
             all_boxes[j][i] = \
                     np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
+                    .astype(np.float32, copy=False)
+            '''
+            top_inds.shape = (top_inds.shape[0], 1)
+            all_boxes[j][i] = \
+                    np.hstack((cls_boxes, cls_scores[:, np.newaxis], top_inds)) \
                     .astype(np.float32, copy=False)
 
             if 0:
@@ -296,7 +306,9 @@ def test_net(net, imdb):
 
     for j in xrange(1, imdb.num_classes):
         for i in xrange(num_images):
-            inds = np.where(all_boxes[j][i][:, -1] > thresh[j])[0]
+            # @mhsung
+            #inds = np.where(all_boxes[j][i][:, -1] > thresh[j])[0]
+            inds = np.where(all_boxes[j][i][:, 4] > thresh[j])[0]
             all_boxes[j][i] = all_boxes[j][i][inds, :]
 
     det_file = os.path.join(output_dir, 'detections.pkl')
