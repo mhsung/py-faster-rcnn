@@ -220,7 +220,7 @@ class custom(datasets.imdb):
         """
         Load image and bounding boxes info from mat files.
         """
-        filename = os.path.join(self._data_path, 'Annotations', index + '.mat')
+        filename = os.path.join(self._data_path, 'annotations', index + '.mat')
         # print 'Loading: {}'.format(filename)
 
         assert os.path.exists(filename), \
