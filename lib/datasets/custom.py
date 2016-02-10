@@ -62,7 +62,7 @@ class custom(datasets.imdb):
         Construct an image path from the image's "index" identifier.
         """
         for ext in self._image_ext:
-            image_path = os.path.join(self._data_path, 'Images',
+            image_path = os.path.join(self._data_path, 'images',
                                       index + ext)
             if os.path.exists(image_path):
                 break
@@ -75,8 +75,8 @@ class custom(datasets.imdb):
         Load the indexes listed in this dataset's image set file.
         """
         # Example path to image set file:
-        # self._data_path + /ImageSets/val.txt
-        image_set_file = os.path.join(self._data_path, 'ImageSets',
+        # self._data_path + /image_sets/val.txt
+        image_set_file = os.path.join(self._data_path, 'Image_sets',
                                       self._image_set + '.txt')
         assert os.path.exists(image_set_file), \
             'Path does not exist: {}'.format(image_set_file)
@@ -162,7 +162,7 @@ class custom(datasets.imdb):
 
         box_list = []
         for i in xrange(self.num_images):
-            filename = os.path.join(self._data_path, 'Regions', self.image_index[i] + '.mat')
+            filename = os.path.join(self._data_path, 'regions', self.image_index[i] + '.mat')
             assert os.path.exists(filename), \
                 'Selective search not found at: {}'.format(filename)
             raw_data = sio.loadmat(filename)
@@ -282,7 +282,7 @@ class custom(datasets.imdb):
         # Parameters.
         kScoreTol = 0.5
 
-        color_image_dir = os.path.join(self._devkit_path, 'data/Colors')
+        color_image_dir = os.path.join(self._devkit_path, 'data/color')
         depth_image_dir = os.path.join(self._devkit_path, 'data/depth')
 
         result_dir = os.path.join(self._devkit_path, 'results', self.name)
