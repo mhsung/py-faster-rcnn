@@ -327,7 +327,7 @@ class custom(datasets.imdb):
                         if dets.shape[1] > 5:
                             # @mhsung
                             # Record the original roi indices at the last column
-                            f.write('{:.1f},{:.1f},{:.1f},{:.1f},{:d},{:.3f} {:d}\n'.
+                            f.write('{:.1f},{:.1f},{:.1f},{:.1f},{:d},{:.3f},{:d}\n'.
                                     format(dets[k, 0], dets[k, 1], dets[k, 2], dets[k, 3],\
                                         cls_ind, dets[k, 4], int(dets[k, 5])))
                         else:
