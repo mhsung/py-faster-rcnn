@@ -273,6 +273,7 @@ def test_net(net, imdb):
             top_inds = np.argsort(-cls_scores)[:max_per_image]
             cls_scores = cls_scores[top_inds]
             cls_boxes = cls_boxes[top_inds, :]
+            keep_inds = inds[top_inds]
             # push new scores onto the minheap
             for val in cls_scores:
                 heapq.heappush(top_scores[j], val)
@@ -290,9 +291,9 @@ def test_net(net, imdb):
                     np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
                     .astype(np.float32, copy=False)
             '''
-            top_inds.shape = (top_inds.shape[0], 1)
+            keep_inds.shape = (keep_inds.shape[0], 1)
             all_boxes[j][i] = \
-                    np.hstack((cls_boxes, cls_scores[:, np.newaxis], top_inds)) \
+                    np.hstack((cls_boxes, cls_scores[:, np.newaxis], keep_inds)) \
                     .astype(np.float32, copy=False)
 
             if 0:

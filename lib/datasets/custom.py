@@ -76,7 +76,7 @@ class custom(datasets.imdb):
         """
         # Example path to image set file:
         # self._data_path + /image_sets/val.txt
-        image_set_file = os.path.join(self._data_path, 'Image_sets',
+        image_set_file = os.path.join(self._data_path, 'image_sets',
                                       self._image_set + '.txt')
         assert os.path.exists(image_set_file), \
             'Path does not exist: {}'.format(image_set_file)
