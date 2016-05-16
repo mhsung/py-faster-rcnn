@@ -246,41 +246,40 @@ class custom(datasets.imdb):
                 'gt_overlaps': overlaps,
                 'flipped': False}
 
-    '''
-    def _write_custom_results_file(self, all_boxes):
+    def _write_custom_results_file_per_class(self, all_boxes):
         use_salt = self.config['use_salt']
         comp_id = 'comp4'
         if use_salt:
             comp_id += '-{}'.format(os.getpid())
 
         # Example: devkit_path/results/test/comp4-44503_det_test_aeroplane.txt
-        dir = os.path.join(self._devkit_path, 'results', self.name)
+        #dir = os.path.join(self._devkit_path, 'results', self.name)
+        dir = os.path.join(self._devkit_path, 'results')
         if not os.path.exists(dir):
             os.makedirs(dir)
 
-        path = os.path.join(self._devkit_path, 'results', self.name, comp_id + '_')
+        #path = os.path.join(self._devkit_path, 'results', self.name, comp_id + '_')
+        path = os.path.join(self._devkit_path, 'results')
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
             print 'Writing {} results file'.format(cls)
-            filename = path + 'det_' + self._image_set + '_' + cls + '.txt'
+            filename = path + '/det_' + self._image_set + '_' + cls + '.txt'
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.image_index):
                     dets = all_boxes[cls_ind][im_ind]
                     if dets == []:
                         continue
-                    # the VOCdevkit expects 1-based indices
                     for k in xrange(dets.shape[0]):
                         f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
                                 format(index, dets[k, -1],
-                                       dets[k, 0] + 1, dets[k, 1] + 1,
-                                       dets[k, 2] + 1, dets[k, 3] + 1))
+                                       dets[k, 0], dets[k, 1],
+                                       dets[k, 2], dets[k, 3]))
         return comp_id
-    '''
 
     def _write_custom_results_file(self, all_boxes):
         # Parameters.
-        kScoreTol = 0.5
+        kScoreTol = 0.0
 
         color_image_dir = os.path.join(self._devkit_path, 'data/color')
         depth_image_dir = os.path.join(self._devkit_path, 'data/depth')
@@ -342,13 +341,15 @@ class custom(datasets.imdb):
                             custom_utils.draw_rect_image(depth_im,\
                                     dets[k, 0], dets[k, 1], dets[k, 2], dets[k, 3], text, color)
 
-            width, height = color_im.size
-            im = Image.new('RGB', (2 * width, height))
-            im.paste(color_im, (0, 0))
-            im.paste(depth_im, (width, 0))
+            #width, height = color_im.size
+            #im = Image.new('RGB', (2 * width, height))
+            #im.paste(color_im, (0, 0))
+            #im.paste(depth_im, (width, 0))
 
-            out_image = output_image_dir + '/' + index + '.png'
-            im.save(out_image)
+            color_image_file = output_image_dir + '/' + index + '_color.png'
+            color_im.save(color_image_file)
+            depth_image_file = output_image_dir + '/' + index + '_depth.png'
+            depth_im.save(depth_image_file)
 
 
     def _do_matlab_eval(self, comp_id, output_dir='output'):
@@ -367,6 +368,7 @@ class custom(datasets.imdb):
 
     def evaluate_detections(self, all_boxes, output_dir):
         comp_id = self._write_custom_results_file(all_boxes)
+        comp_id = self._write_custom_results_file_per_class(all_boxes)
         # self._do_matlab_eval(comp_id, output_dir)
         return
 
