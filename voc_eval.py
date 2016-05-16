@@ -14,7 +14,7 @@ import scipy.sparse
 import scipy.io as sio
 
 
-devkit_path = "/afs/cs.stanford.edu/u/mhsung/home/data/rcnn_results/object_synthesis"
+devkit_path = "/afs/cs.stanford.edu/u/mhsung/home/data/rcnn_results/object_synthesis/"
 
 def parse_rec(filename):
     """ Parse a PASCAL VOC xml file """
@@ -83,16 +83,19 @@ def load_custom_annotation(imagename, classidx):
     assert (objs.shape[1] >= 5)
 
     sub_objs = objs[[x for x in range(num_objs) if objs[x, 4] == classidx], :]
-    num_sum_objs = sub_objs.shape[0]
+    num_sub_objs = sub_objs.shape[0]
 
     # boxes: [xmin ymin xmax ymax]
     bbox = (sub_objs[:, (1, 0, 3, 2)] - 1).astype(np.int32)
     #gt_classes = (sub_objs[:, 4]).astype(np.int32)
+    det = [False] * num_sub_objs
 
     return {'bbox': bbox,
-            'num_objs': num_sum_objs}
+            'num_objs': num_sub_objs,
+            "det": det}
 
 def voc_eval(detpath,
+             imagesetfile,
              classidx,
              classname,
              ovthresh=0.5,
@@ -122,7 +125,7 @@ def voc_eval(detpath,
     # cachedir caches the annotations in a pickle file
 
     # read list of images
-    with open(os.path.join(devkit_path, 'data', 'image_sets', 'test.txt'), 'r') as f:
+    with open(imagesetfile, 'r') as f:
         lines = f.readlines()
     imagenames = [x.strip() for x in lines]
 
@@ -130,6 +133,7 @@ def voc_eval(detpath,
     class_recs = {}
     npos = 0
     for imagename in imagenames:
+        #if imagename != "test_scene_2_3_16": continue
         class_recs[imagename] = load_custom_annotation(imagename, classidx)
         npos = npos + class_recs[imagename]['num_objs']
 
@@ -139,6 +143,11 @@ def voc_eval(detpath,
         lines = f.readlines()
 
     splitlines = [x.strip().split(' ') for x in lines]
+
+    #
+    splitlines = [x for x in splitlines if x[0] in imagenames]
+    #
+
     image_ids = [x[0] for x in splitlines]
     confidence = np.array([float(x[1]) for x in splitlines])
     BB = np.array([[float(z) for z in x[2:]] for x in splitlines])
@@ -154,6 +163,7 @@ def voc_eval(detpath,
     tp = np.zeros(nd)
     fp = np.zeros(nd)
     for d in range(nd):
+        #if image_ids[d] != "test_scene_2_3_16": continue
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
         ovmax = -np.inf
@@ -180,13 +190,12 @@ def voc_eval(detpath,
             jmax = np.argmax(overlaps)
 
         if ovmax > ovthresh:
-            tp[d] = 1.
             #if not R['difficult'][jmax]:
-            #    if not R['det'][jmax]:
-            #        tp[d] = 1.
-            #        R['det'][jmax] = 1
-            #    else:
-            #        fp[d] = 1.
+            if not R['det'][jmax]:
+                tp[d] = 1.
+                R['det'][jmax] = 1
+            else:
+                fp[d] = 1.
         else:
             fp[d] = 1.
 
@@ -198,11 +207,19 @@ def voc_eval(detpath,
     # ground truth
     prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
     ap = voc_ap(rec, prec, use_07_metric)
-    print(classname + ": AP = " + str(ap))
+    print("# GTs = " + str(npos))
+    print("# Predictions = " + str(nd));
+    print("False Positive = " + str(fp[-1]))
+    print("True Positive = " + str(tp[-1]))
+    print("Recall = " + str(rec[-1]))
+    print("Precision = " + str(prec[-1]))
+    print("AP = " + str(ap))
 
     return rec, prec, ap
 
 if __name__ == "__main__":
+    detpath_root = "/afs/cs.stanford.edu/u/mhsung/home/app/scene-completion/report/"
+
     print(os.path.join(devkit_path, 'labels.txt'))
     with open(os.path.join(devkit_path, 'labels.txt'), 'r') as f:
         labels = f.read().splitlines()
@@ -210,9 +227,14 @@ if __name__ == "__main__":
         classes = tuple(labels)
         print(classes)
 
+    imagesetfile = os.path.join(detpath_root, '../python', 'test_scene_list.txt')
+    print(imagesetfile)
+
     for cid in range(1, len(classes)):
         classname = classes[cid]
         print("[" + str(cid) + "]: " + classname)
         detpath = os.path.join(devkit_path, 'results', 'det_test_{0}.txt')
-        voc_eval(detpath, cid, classname)
+        #detpath = os.path.join(detpath_root, 'prediction_{0}.txt')
+        #detpath = os.path.join(detpath_root, 'retrieval_{0}.txt')
+        voc_eval(detpath, imagesetfile, cid, classname, 0.3)
 

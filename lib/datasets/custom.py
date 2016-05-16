@@ -301,7 +301,7 @@ class custom(datasets.imdb):
             color_im = Image.open(color_image_dir + '/' + index + '.png')
             depth_im = Image.open(depth_image_dir + '/' + index + '.png')
 
-            # Rescale the 16bit depth image and convert the gratscale image to a rgb image.
+            # Rescale the 16bit depth image and convert the grayscale image to a rgb image.
             max_depth = depth_im.getextrema()[1]
             temp_im = Image.new('L', depth_im.size)
             temp_im.putdata(depth_im.getdata(), (255.0 / max_depth))
